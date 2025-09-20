@@ -1,0 +1,25 @@
+{
+  "metrics": {
+    "TCS": 0.2,
+    "HDI": 0.4,
+    "PDS": 0.25,
+    "EVI": 1,
+    "CBS": 0.3,
+    "LQS": 0.4
+  },
+  "bundle": {
+    "network": {
+      "data": [
+        { "source": "HTR2A", "target": "5-HT", "weight": 0.8 }
+      ]
+    },
+    "regions": {
+      "data": {
+        "regions_ranked": ["ACC", "PFC", "HPC"]
+      }
+    },
+    "literature": [
+      { "title": "Selective serotonin reuptake modulates apathy", "pmid": "123456" }
+    ]
+  }
+}

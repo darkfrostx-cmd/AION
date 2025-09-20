@@ -1,0 +1,9 @@
+name = "aion-space-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-05-12"
+usage_model = "bundled"
+workers_dev = true
+
+[vars]
+NEURO_SPACE = "darkfrostx/neuro-mechanism-backend"
+AUDITOR_SPACE = "darkfrostx/ssra-auditor"
