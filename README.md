@@ -1,13 +1,12 @@
 # AION
 
-Utilities for interacting with the Hugging Face Hub, Hugging Face Spaces, and Cloudflare services.
+Utilities for interacting with Hugging Face repositories and Cloudflare services.
 
 ## Features
-- **Hugging Face client** for listing models, retrieving model metadata, and downloading files from repositories.
-- **Hugging Face Space client** with CLI helpers tailored to `darkfrostx/neuro-mechanism-backend` and `darkfrostx/ssra-auditor` plus reusable payload templates.
-- **Cloudflare client** for listing zones and working with Workers KV namespaces.
-- **Command line interface** that wires all clients together for quick manual usage.
-- **Cloudflare Worker scaffold** that proxies `/neuro/*` and `/auditor/*` routes to the Spaces, ready for Wrangler deploys.
+- **Hugging Face repository client** for listing models, retrieving cross-repository metadata, exploring file trees, and downloading artifacts pinned to revisions.
+- **Repository-centric CLI** that surfaces the Hub helpers through commands such as `repo-info`, `repo-files`, and `download`.
+- **Cloudflare client** for listing zones and managing Workers KV namespaces from the same toolbox.
+- **Cloudflare Worker scaffold** that proxies repository metadata, file listings, and raw file fetches for pre-configured Hugging Face repos.
 
 ## Installation
 The project only depends on the Python standard library. Clone the repository and run the CLI with Python 3.9+:
@@ -16,19 +15,57 @@ The project only depends on the Python standard library. Clone the repository an
 python -m aion.cli --help
 ```
 
-## Usage
-### Hugging Face
-Provide a token via the `--token` flag or the `HF_TOKEN` environment variable.
+## Repository-centric workflows
+The CLI is opinionated around Hugging Face repositories. Authenticate with an access token via `--token` or the `HF_TOKEN` environment variable, then chain the commands below to inspect, audit, and mirror repository contents.
 
+### 1. Inspect repository metadata
 ```bash
-# List models from an author
-python -m aion.cli huggingface list-models --author my-username
+# Fetch metadata for a Space repository
+python -m aion.cli huggingface repo-info \
+  darkfrostx/neuro-mechanism-backend \
+  --repo-type space
 
-# Download a file from a repo
-python -m aion.cli huggingface download my-username/my-model config.json --output ./config.json
+# Inspect a dataset repository
+python -m aion.cli huggingface repo-info \
+  darkfrostx/ssra-auditor-dataset \
+  --repo-type dataset
 ```
 
-### Cloudflare
+### 2. Explore repository files
+```bash
+# List everything tracked on main
+python -m aion.cli huggingface repo-files \
+  darkfrostx/neuro-mechanism-backend \
+  --repo-type space \
+  --revision main
+
+# Only show direct children within a subdirectory
+python -m aion.cli huggingface repo-files \
+  darkfrostx/neuro-mechanism-backend \
+  --repo-type space \
+  --path app \
+  --non-recursive
+```
+
+### 3. Retrieve revision-pinned artifacts
+```bash
+# Download a file while staying on a specific revision
+python -m aion.cli huggingface download \
+  darkfrostx/neuro-mechanism-backend \
+  app/main.py \
+  --revision main \
+  --output ./main.py
+```
+
+### 4. Discover related models
+```bash
+# Use model listings to find additional repos under an author
+python -m aion.cli huggingface list-models --author darkfrostx --limit 5
+```
+
+All commands print JSON responses with stable formatting so they can feed into scripts or documentation generators. The updated unit tests in `tests/` demonstrate how to mock the client for CI flows.
+
+## Cloudflare
 Provide a token via the `--token` flag or the `CLOUDFLARE_API_TOKEN` environment variable.
 
 ```bash
@@ -39,67 +76,41 @@ python -m aion.cli cloudflare list-zones
 python -m aion.cli cloudflare --account-id <ACCOUNT_ID> create-kv-namespace "My Namespace"
 ```
 
-The CLI surfaces API errors with readable messages. See the unit tests in `tests/` for examples of how to mock the clients in automated workflows.
+## Cloudflare Worker for Hugging Face repositories
+[`cloudflare/worker`](cloudflare/worker/) contains a Worker that understands Hugging Face repositories and a pinned revision for each route alias. It exposes three behaviours per alias (`/neuro/*` and `/auditor/*` by default):
 
-### Hugging Face Spaces
-The CLI can now talk directly to Spaces, including the two services you linked (`darkfrostx/neuro-mechanism-backend` and `darkfrostx/ssra-auditor`).
+- `/<alias>/__info__` → returns the repository metadata from the Hub API.
+- `/<alias>/__files__` (supports `path` and `recursive` query parameters) → returns the Hub tree listing for the configured revision.
+- `/<alias>/<file path>` → streams the raw file content via the Hub `resolve/` endpoint.
 
-#### Quick shortcuts
+### Default configuration
+`wrangler.toml` ships with values targeting the repos backing the neuro mechanism backend and SSRA auditor:
+
+- `NEURO_REPO_ID = "darkfrostx/neuro-mechanism-backend"`
+- `NEURO_REPO_TYPE = "space"`
+- `NEURO_REPO_REVISION = "main"`
+- `AUDITOR_REPO_ID = "darkfrostx/ssra-auditor"`
+- `AUDITOR_REPO_TYPE = "space"`
+- `AUDITOR_REPO_REVISION = "main"`
+
+Add secrets if the repos are private:
 
 ```bash
-# Health check against the neuro backend (defaults to /health)
-python -m aion.cli huggingface space neuro-backend
-
-# Request the mechanism graph manifest with query parameters from the sample template
-python -m aion.cli huggingface space neuro-backend \
-  --path mechanism_graph_manifest \
-  --query receptor=HTR2A --query symptom=apathy
-
-# Invoke the SSRA auditor with the ready-made payload template
-python -m aion.cli huggingface space ssra-auditor \
-  --payload-file aion/templates/ssra_auditor_payload.json
-
-# Call any other Space endpoint explicitly
-python -m aion.cli huggingface space call darkfrostx/ssra-auditor \
-  --path audit --payload '{"bundle": {}, "metrics": {}}'
+wrangler secret put NEURO_REPO_TOKEN
+wrangler secret put AUDITOR_REPO_TOKEN
 ```
 
-The command automatically prints JSON responses. If a Space returns binary content (e.g. a `.gz` archive) the CLI advises redirecting output to a file.
-
-Templates backing the shortcuts live under [`aion/templates/`](aion/templates). `neuro_manifest_query.json` documents a common query to the neuro backend, while `ssra_auditor_payload.json` is a drop-in request body for the auditor's `/audit` endpoint.
-
-### Cloudflare Worker proxy
-A scaffolded Worker that mirrors your dashboard configuration lives in [`cloudflare/worker`](cloudflare/worker/). It proxies:
-
-- `https://<worker-domain>/neuro/*` → `https://darkfrostx-neuro-mechanism-backend.hf.space`
-- `https://<worker-domain>/auditor/*` → `https://darkfrostx-ssra-auditor.hf.space`
-
-Key files:
-
-- `wrangler.toml` – base configuration and environment variable defaults.
-- `src/index.ts` – proxy implementation that forwards headers, query strings, and optionally sets bearer tokens stored as Worker secrets.
-- `package.json` / `tsconfig.json` – TypeScript + Wrangler tooling with a Prettier hook.
-
-To deploy:
-
+### Deploying
 1. Install Wrangler and authenticate: `npm install -g wrangler && wrangler login`.
-2. From `cloudflare/worker/`, configure secrets if the Spaces require tokens:
-
-   ```bash
-   wrangler secret put NEURO_SPACE_TOKEN
-   wrangler secret put AUDITOR_SPACE_TOKEN
-   ```
-
-3. Adjust `wrangler.toml` (e.g. rename the Worker or set routes), then deploy:
-
+2. From `cloudflare/worker/`, review `wrangler.toml` and adjust names, route bindings, or the `HF_API_BASE` override if you need to target the Hugging Face staging environment.
+3. Install dependencies and deploy:
    ```bash
    npm install
    npm run deploy
    ```
+4. (Optional) Link the Worker to your Git repository in the Cloudflare dashboard so `wrangler deploy` runs on pushes to `main`.
 
-4. In the Cloudflare dashboard, link the Worker to your repository (screenshot flow you shared) so `wrangler deploy` runs automatically when you push to `main`.
-
-Once published, sending requests to `/neuro/*` or `/auditor/*` on the Worker domain forwards them to the respective Hugging Face Space with preserved methods, bodies, and query parameters.
+Once deployed you can serve metadata, file listings, or raw files directly from the Worker domain while guaranteeing every request stays on the expected repository revision.
 
 ## Running tests
 ```bash

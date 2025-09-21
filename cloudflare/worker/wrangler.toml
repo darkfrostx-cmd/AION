@@ -4,8 +4,13 @@ compatibility_date = "2024-09-05"
 workers_dev = true
 
 [vars]
-NEURO_SPACE_BASE = "https://darkfrostx-neuro-mechanism-backend.hf.space"
-AUDITOR_SPACE_BASE = "https://darkfrostx-ssra-auditor.hf.space"
+HF_API_BASE = "https://huggingface.co"
+NEURO_REPO_ID = "darkfrostx/neuro-mechanism-backend"
+NEURO_REPO_TYPE = "space"
+NEURO_REPO_REVISION = "main"
+AUDITOR_REPO_ID = "darkfrostx/ssra-auditor"
+AUDITOR_REPO_TYPE = "space"
+AUDITOR_REPO_REVISION = "main"
 
 [observability]
 enabled = true
