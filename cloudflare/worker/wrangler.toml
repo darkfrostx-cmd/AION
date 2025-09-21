@@ -1,0 +1,14 @@
+name = "aion-neuro-auditor-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-09-05"
+workers_dev = true
+
+[vars]
+HUGGING_FACE_API_BASE = "https://huggingface.co"
+NEURO_REPO_ID = "darkfrostx/neuro-mechanism-backend"
+AUDITOR_REPO_ID = "darkfrostx/ssra-auditor"
+NEURO_REPO_REVISION = "main"
+AUDITOR_REPO_REVISION = "main"
+
+[observability]
+enabled = true

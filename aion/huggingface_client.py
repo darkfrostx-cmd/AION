@@ -67,6 +67,40 @@ class HuggingFaceClient:
             return destination_path
         return content
 
+    def get_repo_info(self, repo_id: str, revision: Optional[str] = None) -> Dict[str, Any]:
+        """Return the repository metadata returned by the Hub API.
+
+        Parameters
+        ----------
+        repo_id:
+            The repository identifier, e.g. ``"user/project"``.
+        revision:
+            Optional Git revision. When provided the metadata reflects the
+            specified branch, tag, or commit.
+        """
+
+        encoded_repo = parse.quote(repo_id, safe="")
+        url = f"{self.base_url}/api/models/{encoded_repo}"
+        if revision:
+            query = parse.urlencode({"revision": revision})
+            url = f"{url}?{query}"
+        result = self._get_json(url)
+        if not isinstance(result, dict):  # pragma: no cover - defensive guard
+            raise APIError("Hugging Face", "Unexpected response payload from Hub API")
+        return result
+
+    def list_repo_files(self, repo_id: str, revision: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List files available in a repository revision.
+
+        The response mirrors the ``siblings`` entries from the Hub API.
+        """
+
+        info = self.get_repo_info(repo_id, revision=revision)
+        siblings = info.get("siblings", [])
+        if not isinstance(siblings, list):  # pragma: no cover - defensive guard
+            raise APIError("Hugging Face", "Repository metadata does not contain file listings")
+        return siblings
+
     def _get_json(self, url: str) -> Any:
         try:
             req = request.Request(url, headers=self._build_headers())
@@ -88,3 +122,5 @@ class HuggingFaceClient:
             raise APIError("Hugging Face", message, status=exc.code) from exc
         except error.URLError as exc:  # pragma: no cover - network failure path
             raise APIError("Hugging Face", str(exc.reason)) from exc
+
+

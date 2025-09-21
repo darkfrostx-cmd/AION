@@ -61,3 +61,28 @@ def test_huggingface_http_error_raises_api_error(mock_urlopen: MagicMock) -> Non
 
     assert "Hugging Face API error" in str(exc.value)
     assert exc.value.status == 404
+
+
+@patch("aion.huggingface_client.request.urlopen")
+def test_get_repo_info_appends_revision_query(mock_urlopen: MagicMock) -> None:
+    payload = {"id": "demo/model", "siblings": []}
+    mock_urlopen.return_value = _mock_response(payload)
+
+    client = HuggingFaceClient(token="token")
+    info = client.get_repo_info("demo/model", revision="develop")
+
+    assert info == payload
+    request_obj = mock_urlopen.call_args[0][0]
+    assert request_obj.get_full_url().endswith("/api/models/demo%2Fmodel?revision=develop")
+    assert request_obj.get_header("Authorization") == "Bearer token"
+
+
+@patch("aion.huggingface_client.request.urlopen")
+def test_list_repo_files_returns_siblings(mock_urlopen: MagicMock) -> None:
+    payload = {"id": "demo/model", "siblings": [{"rfilename": "config.json"}]}
+    mock_urlopen.return_value = _mock_response(payload)
+
+    client = HuggingFaceClient()
+    files = client.list_repo_files("demo/model")
+
+    assert files == payload["siblings"]

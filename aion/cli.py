@@ -39,6 +39,12 @@ def _handle_huggingface(args: argparse.Namespace) -> None:
             print(content.decode("utf-8", errors="replace"))
         else:
             print(f"Downloaded to {content}")
+    elif args.action == "repo-info":
+        info = client.get_repo_info(args.repo_id, revision=args.revision)
+        _print_json(info)
+    elif args.action == "repo-files":
+        files = client.list_repo_files(args.repo_id, revision=args.revision)
+        _print_json(files)
 
 
 def _handle_cloudflare(args: argparse.Namespace) -> None:
@@ -78,6 +84,24 @@ def build_parser() -> argparse.ArgumentParser:
     download_parser.add_argument("filename", help="Path to the file inside the repository")
     download_parser.add_argument("--revision", default="main", help="Repository revision to download from")
     download_parser.add_argument("--output", help="Destination path to write the file")
+
+    repo_info_parser = hf_sub.add_parser(
+        "repo-info", help="Fetch metadata for a Hugging Face repository"
+    )
+    repo_info_parser.add_argument("repo_id", help="Repository identifier (e.g. user/model)")
+    repo_info_parser.add_argument(
+        "--revision",
+        help="Optional Git revision (branch, tag, or commit hash)",
+    )
+
+    repo_files_parser = hf_sub.add_parser(
+        "repo-files", help="List files inside a Hugging Face repository"
+    )
+    repo_files_parser.add_argument("repo_id", help="Repository identifier (e.g. user/model)")
+    repo_files_parser.add_argument(
+        "--revision",
+        help="Optional Git revision (branch, tag, or commit hash)",
+    )
 
     cf_parser = subparsers.add_parser("cloudflare", help="Commands for the Cloudflare API")
     cf_parser.add_argument("--token", help="API token (defaults to CLOUDFLARE_API_TOKEN environment variable)")
