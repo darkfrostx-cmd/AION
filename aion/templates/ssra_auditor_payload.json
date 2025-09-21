@@ -1,0 +1,37 @@
+{
+  "bundle": {
+    "network": {
+      "data": [
+        {"source": "HTR2A", "target": "HTR2C", "weight": 0.82},
+        {"source": "HTR2A", "target": "SLC6A4", "weight": 0.65}
+      ]
+    },
+    "regions": {
+      "data": {
+        "regions_ranked": [
+          {"region": "Anterior cingulate cortex", "score": 0.91},
+          {"region": "Orbitofrontal cortex", "score": 0.77}
+        ]
+      }
+    },
+    "literature": [
+      {
+        "title": "HTR2A modulation reduces apathy in clinical trials",
+        "citation": "Doe et al. (2024)",
+        "summary": "Double-blind trial showing measurable symptom relief."
+      }
+    ]
+  },
+  "metrics": {
+    "TCS": 0.45,
+    "HDI": 0.8,
+    "PDS": 0.25,
+    "EVI": 2,
+    "CBS": 0.3,
+    "LQS": 0.4
+  },
+  "metadata": {
+    "session_id": "demo-session-001",
+    "auditor": "cli"
+  }
+}

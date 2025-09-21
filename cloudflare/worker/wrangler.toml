@@ -1,0 +1,11 @@
+name = "aion-neuro-auditor-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-09-05"
+workers_dev = true
+
+[vars]
+NEURO_SPACE_BASE = "https://darkfrostx-neuro-mechanism-backend.hf.space"
+AUDITOR_SPACE_BASE = "https://darkfrostx-ssra-auditor.hf.space"
+
+[observability]
+enabled = true

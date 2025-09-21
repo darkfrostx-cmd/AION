@@ -1,0 +1,8 @@
+{
+  "endpoint": "mechanism_graph_manifest",
+  "query": {
+    "receptor": "HTR2A",
+    "symptom": "apathy"
+  },
+  "notes": "Invoke with: python -m aion.cli huggingface space neuro-backend --path mechanism_graph_manifest --query receptor=HTR2A --query symptom=apathy"
+}
