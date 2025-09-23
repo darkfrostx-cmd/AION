@@ -133,6 +133,26 @@ Perform the steps below for **each** Space (`neuro-mechanism-backend` and `ssra-
 
 ---
 
+## 6. Automate the verification (optional but recommended)
+
+Once you have confirmed manual access, you can let the repository run the same checks on demand.
+
+1. Copy the environment template and provide your credentials:
+   ```powershell
+   Copy-Item .env.example .env
+   notepad .env
+   ```
+   *(On macOS/Linux use `cp .env.example .env` and edit with your favourite editor.)*
+2. From the project root, run the consolidated smoke test:
+   ```powershell
+   make smoke
+   ```
+   The script clones both Spaces inside `.smoke/`, writes a timestamped `CODEx_OK.txt` file so pushes are harmless and reversible, publishes the Cloudflare Worker with `npx wrangler publish`, and polls `https://<worker>.workers.dev/neuro/*` and `/auditor/*` until both respond with `200`.
+
+Use `make smoke-hf` or `make smoke-cf` to focus on one side when debugging. `make smoke-clean` removes the `.smoke/` workspace entirely.
+
+---
+
 ## Troubleshooting quick reference
 
 | Symptom | Fix |
