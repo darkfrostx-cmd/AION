@@ -74,7 +74,18 @@ python -m aion.cli cloudflare list-zones
 
 # Create a Workers KV namespace (requires account id)
 python -m aion.cli cloudflare --account-id <ACCOUNT_ID> create-kv-namespace "My Namespace"
+
+# Discover Worker services (new in this release)
+python -m aion.cli cloudflare --account-id <ACCOUNT_ID> list-worker-services
+
+# Inspect a specific service and show its environments
+python -m aion.cli cloudflare --account-id <ACCOUNT_ID> worker-service-info ssra-orchestrator --include-environments
+
+# Download the production script for a service
+python -m aion.cli cloudflare --account-id <ACCOUNT_ID> worker-service-script ssra-orchestrator --environment production --output cloudflare/ssra-orchestrator.js
 ```
+
+These helpers make it easy to pull existing Worker services—such as `ssra-orchestrator` or `ssra-gateway`—into the repository. Save the downloaded script anywhere under `cloudflare/` (for example `cloudflare/ssra-orchestrator/index.js`) and pair it with a `wrangler.toml` that matches the remote configuration so everything is versioned alongside the Hugging Face worker.
 
 ## Cloudflare Worker for Hugging Face repositories
 [`cloudflare/worker`](cloudflare/worker/) contains a Worker that understands Hugging Face repositories and a pinned revision for each route alias. It exposes three behaviours per alias (`/neuro/*` and `/auditor/*` by default):
