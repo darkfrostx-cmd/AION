@@ -123,6 +123,22 @@ wrangler secret put AUDITOR_REPO_TOKEN
 
 Once deployed you can serve metadata, file listings, or raw files directly from the Worker domain while guaranteeing every request stays on the expected repository revision.
 
+## End-to-end smoke test
+
+Drop-in automation under `scripts/smoke.sh` exercises the full workflow—pushing harmless commits to both Spaces, deploying the Cloudflare Worker, and probing the proxy routes until they return HTTP 200 responses.
+
+1. Copy the environment template and fill in your credentials:
+   ```bash
+   cp .env.example .env
+   # edit .env with your HF/Cloudflare tokens and any custom paths
+   ```
+2. Run the combined smoke test (or use `make smoke-hf` / `make smoke-cf` to isolate phases):
+   ```bash
+   make smoke
+   ```
+
+The command creates a temporary `.smoke/` workspace for cloning, commits a timestamped `CODEx_OK.txt` file to each Space to trigger rebuilds, publishes the Worker with `npx wrangler publish`, and keeps polling `https://<worker>.workers.dev/neuro/*` and `/auditor/*` until both return `200`.
+
 ## Full integration walkthrough
 
 If you need a step-by-step guide (including where to paste tokens and how to confirm write access to each Space before deploying the worker), follow [docs/INTEGRATION.md](docs/INTEGRATION.md). It breaks the workflow into one-minute actions covering:

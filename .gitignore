@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+.env
+.env.local
+*.env.local
+.smoke/
+node_modules/
