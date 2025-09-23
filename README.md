@@ -123,6 +123,16 @@ wrangler secret put AUDITOR_REPO_TOKEN
 
 Once deployed you can serve metadata, file listings, or raw files directly from the Worker domain while guaranteeing every request stays on the expected repository revision.
 
+## Full integration walkthrough
+
+If you need a step-by-step guide (including where to paste tokens and how to confirm write access to each Space before deploying the worker), follow [docs/INTEGRATION.md](docs/INTEGRATION.md). It breaks the workflow into one-minute actions covering:
+
+1. Generating Hugging Face write tokens.
+2. Cloning and testing pushes to both Spaces locally.
+3. Using the `aion` CLI to explore metadata and file listings.
+4. Deploying the Cloudflare worker and adding secrets when required.
+5. Troubleshooting the most common pitfalls (`ModuleNotFoundError`, missing Git credentials, or worker auth failures).
+
 ## Running tests
 ```bash
 python -m pytest
