@@ -74,7 +74,18 @@ python -m aion.cli cloudflare list-zones
 
 # Create a Workers KV namespace (requires account id)
 python -m aion.cli cloudflare --account-id <ACCOUNT_ID> create-kv-namespace "My Namespace"
+
+# Discover Worker services (new in this release)
+python -m aion.cli cloudflare --account-id <ACCOUNT_ID> list-worker-services
+
+# Inspect a specific service and show its environments
+python -m aion.cli cloudflare --account-id <ACCOUNT_ID> worker-service-info ssra-orchestrator --include-environments
+
+# Download the production script for a service
+python -m aion.cli cloudflare --account-id <ACCOUNT_ID> worker-service-script ssra-orchestrator --environment production --output cloudflare/ssra-orchestrator.js
 ```
+
+These helpers make it easy to pull existing Worker services—such as `ssra-orchestrator` or `ssra-gateway`—into the repository. Save the downloaded script anywhere under `cloudflare/` (for example `cloudflare/ssra-orchestrator/index.js`) and pair it with a `wrangler.toml` that matches the remote configuration so everything is versioned alongside the Hugging Face worker.
 
 ## Cloudflare Worker for Hugging Face repositories
 [`cloudflare/worker`](cloudflare/worker/) contains a Worker that understands Hugging Face repositories and a pinned revision for each route alias. It exposes three behaviours per alias (`/neuro/*` and `/auditor/*` by default):
@@ -111,6 +122,26 @@ wrangler secret put AUDITOR_REPO_TOKEN
 4. (Optional) Link the Worker to your Git repository in the Cloudflare dashboard so `wrangler deploy` runs on pushes to `main`.
 
 Once deployed you can serve metadata, file listings, or raw files directly from the Worker domain while guaranteeing every request stays on the expected repository revision.
+
+## Full integration walkthrough
+
+If you need a step-by-step guide (including where to paste tokens and how to confirm write access to each Space before deploying the worker), follow [docs/INTEGRATION.md](docs/INTEGRATION.md). It breaks the workflow into one-minute actions covering:
+
+1. Generating Hugging Face write tokens.
+2. Cloning and testing pushes to both Spaces locally.
+3. Using the `aion` CLI to explore metadata and file listings.
+4. Deploying the Cloudflare worker and adding secrets when required.
+5. Troubleshooting the most common pitfalls (`ModuleNotFoundError`, missing Git credentials, or worker auth failures).
+
+## Automated smoke test
+
+To verify everything in one command, copy `.env.example` to `.env`, fill in your Hugging Face and Cloudflare credentials, then run:
+
+```bash
+make smoke
+```
+
+The smoke test will clone both Spaces into `.smoke/`, push a timestamped `CODEx_OK.txt` file (triggering a rebuild), deploy the worker with Wrangler, and poll the `/neuro/__info__` and `/auditor/__info__` routes through the worker until they return HTTP 200. Use `make smoke-hf` or `make smoke-cf` to run only one half, and `make smoke-clean` when you want to remove the temporary `.smoke/` folder.
 
 ## Running tests
 ```bash

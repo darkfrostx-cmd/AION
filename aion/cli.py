@@ -80,6 +80,24 @@ def _handle_cloudflare(args: argparse.Namespace) -> None:
     elif args.action == "write-kv":
         result = client.write_kv_value(args.namespace_id, args.key, args.value)
         _print_json(result)
+    elif args.action == "list-worker-services":
+        services = client.list_worker_services()
+        _print_json(services)
+    elif args.action == "worker-service-info":
+        info = client.get_worker_service(args.service_name)
+        if args.include_environments:
+            environments = client.list_worker_service_environments(args.service_name)
+            info = dict(info)
+            info["environments"] = environments
+        _print_json(info)
+    elif args.action == "worker-service-script":
+        script = client.get_worker_service_script(args.service_name, args.environment)
+        if args.output:
+            output_path = Path(args.output)
+            output_path.write_text(script, encoding="utf-8")
+            print(f"Saved to {output_path}")
+        else:
+            print(script)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -154,6 +172,37 @@ def build_parser() -> argparse.ArgumentParser:
     kv_write_parser.add_argument("namespace_id", help="Namespace identifier")
     kv_write_parser.add_argument("key", help="Key for the value")
     kv_write_parser.add_argument("value", help="Value to store")
+
+    worker_services_parser = cf_sub.add_parser(
+        "list-worker-services",
+        help="List Worker services for the configured account",
+    )
+
+    worker_service_info_parser = cf_sub.add_parser(
+        "worker-service-info",
+        help="Show metadata for a Worker service",
+    )
+    worker_service_info_parser.add_argument("service_name", help="Worker service name")
+    worker_service_info_parser.add_argument(
+        "--include-environments",
+        action="store_true",
+        help="Include environment listings in the output",
+    )
+
+    worker_service_script_parser = cf_sub.add_parser(
+        "worker-service-script",
+        help="Download the script for a Worker service environment",
+    )
+    worker_service_script_parser.add_argument("service_name", help="Worker service name")
+    worker_service_script_parser.add_argument(
+        "--environment",
+        default="production",
+        help="Environment to fetch (default: production)",
+    )
+    worker_service_script_parser.add_argument(
+        "--output",
+        help="Optional path to save the script locally",
+    )
 
     return parser
 
