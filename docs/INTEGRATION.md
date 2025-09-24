@@ -153,6 +153,22 @@ Use `make smoke-hf` or `make smoke-cf` to focus on one side when debugging. `mak
 
 ---
 
+## 7. Automate everything with GitHub Actions (codex-ci)
+
+The repository includes `.github/workflows/codex-ci.yml` so Codex (your CI runner) can repeat the smoke test on each push to `main` or on demand.
+
+1. In GitHub go to **Settings → Secrets and variables → Actions → New repository secret** and add:
+   - `HF_TOKEN` → Hugging Face **Write** access token.
+   - `HF_USERNAME` → Hugging Face username (required when cloning over HTTPS).
+   - `CF_API_TOKEN` → Cloudflare API token with the Workers Scripts read/write permissions.
+   - `CF_ACCOUNT_ID` → Cloudflare account identifier from the dashboard.
+   - *(Optional)* `GH_PAT` → fine-grained Personal Access Token with `contents:read`/`contents:write` if workflow pushes should trigger other workflows.
+2. Push a commit to `main` or click **Run workflow** on the **codex-ci** entry under the Actions tab.
+
+When the workflow executes it stamps the repository with `.codex-ci-stamp`, pushes the `CODEx_OK.txt` smoke file to both Spaces (triggering a rebuild), and deploys the Cloudflare worker with `wrangler deploy`. The stamp file is listed in `.gitignore` so local clones stay clean even if the workflow pushes back to the repository.
+
+---
+
 ## Troubleshooting quick reference
 
 | Symptom | Fix |
