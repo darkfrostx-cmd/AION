@@ -1,0 +1,81 @@
+name: codex-ci
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  HF_NEURO_SPACE: darkfrostx/neuro-mechanism-backend
+  HF_AUDITOR_SPACE: darkfrostx/ssra-auditor
+  WORKER_DIR: worker
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout (uses GITHUB_TOKEN)
+        uses: actions/checkout@v4
+
+      - name: Show repo status
+        run: |
+          git status
+
+      - name: Commit a harmless stamp
+        run: |
+          echo "codex-ci $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> .codex-ci-stamp
+          git config user.name  "codex-ci"
+          git config user.email "codex-ci@users.noreply.github.com"
+          git add .codex-ci-stamp || true
+          git commit -m "ci: stamp" || echo "no changes to commit"
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Install Hugging Face CLI
+        run: pipx install "huggingface_hub[cli]" || pip install -U "huggingface_hub[cli]"
+
+      - name: HF login (non-interactive)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential -y
+
+      - name: Push smoke file to neuro space
+        env:
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          SPACE: ${{ env.HF_NEURO_SPACE }}
+        run: |
+          git clone "https://huggingface.co/spaces/$SPACE" .hf-neuro
+          echo "codex smoke $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .hf-neuro/CODEx_OK.txt
+          cd .hf-neuro
+          git add CODEx_OK.txt
+          git commit -m "codex: smoke test neuro" || echo "no-op"
+          git push
+
+      - name: Push smoke file to auditor space
+        env:
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          SPACE: ${{ env.HF_AUDITOR_SPACE }}
+        run: |
+          git clone "https://huggingface.co/spaces/$SPACE" .hf-auditor
+          echo "codex smoke $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .hf-auditor/CODEx_OK.txt
+          cd .hf-auditor
+          git add CODEx_OK.txt
+          git commit -m "codex: smoke test auditor" || echo "no-op"
+          git push
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: ${{ env.WORKER_DIR }}
+          command: deploy
+
+      - name: Probe neuro/auditor via Worker
+        run: |
+          echo "skip: add curl checks once you know the workers.dev URL"

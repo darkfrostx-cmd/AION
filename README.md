@@ -123,6 +123,26 @@ wrangler secret put AUDITOR_REPO_TOKEN
 
 Once deployed you can serve metadata, file listings, or raw files directly from the Worker domain while guaranteeing every request stays on the expected repository revision.
 
+## Continuous integration (codex-ci)
+
+The repository ships with `.github/workflows/codex-ci.yml`, a GitHub Actions workflow that mirrors the manual smoke test. To use it:
+
+1. Open **Settings → Secrets and variables → Actions → New repository secret** in GitHub and add the credentials generated for Hugging Face and Cloudflare:
+   - `HF_TOKEN` – Hugging Face access token with **Write** permissions.
+   - `HF_USERNAME` – your Hugging Face username (used for cloning the Spaces).
+   - `CF_API_TOKEN` – Cloudflare API token with the **Workers Scripts:Read, Workers Scripts:Edit** scope.
+   - `CF_ACCOUNT_ID` – Cloudflare account identifier visible in the dashboard URL.
+   - *(Optional)* `GH_PAT` – a fine-grained Personal Access Token with `contents:read` and `contents:write` if workflow-generated commits should trigger other workflows.
+2. Push to `main` or trigger **codex-ci** from the Actions tab.
+
+The workflow:
+
+- Commits a timestamped `.codex-ci-stamp` file (ignored locally via `.gitignore`) to prove the Actions runner can push back to the repository.
+- Installs the Hugging Face CLI, authenticates with the provided token, and pushes harmless `CODEx_OK.txt` updates to both Spaces. Each push rebuilds the Space.
+- Deploys the Cloudflare Worker from `cloudflare/worker/` via the official `cloudflare/wrangler-action` using `wrangler deploy`.
+
+Extend the final step to curl your `workers.dev` routes once you know the worker URL.
+
 ## End-to-end smoke test
 
 Drop-in automation under `scripts/smoke.sh` exercises the full workflow—pushing harmless commits to both Spaces, deploying the Cloudflare Worker, and probing the proxy routes until they return HTTP 200 responses.
