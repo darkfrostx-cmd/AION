@@ -123,6 +123,32 @@ wrangler secret put AUDITOR_REPO_TOKEN
 
 Once deployed you can serve metadata, file listings, or raw files directly from the Worker domain while guaranteeing every request stays on the expected repository revision.
 
+## End-to-end smoke test
+
+Drop-in automation under `scripts/smoke.sh` exercises the full workflow—pushing harmless commits to both Spaces, deploying the Cloudflare Worker, and probing the proxy routes until they return HTTP 200 responses.
+
+1. Copy the environment template and fill in your credentials:
+   ```bash
+   cp .env.example .env
+   # edit .env with your HF/Cloudflare tokens and any custom paths
+   ```
+2. Run the combined smoke test (or use `make smoke-hf` / `make smoke-cf` to isolate phases):
+   ```bash
+   make smoke
+   ```
+
+The command creates a temporary `.smoke/` workspace for cloning, commits a timestamped `CODEx_OK.txt` file to each Space to trigger rebuilds, publishes the Worker with `npx wrangler publish`, and keeps polling `https://<worker>.workers.dev/neuro/*` and `/auditor/*` until both return `200`.
+
+## GitHub Actions smoke workflow
+
+Add repository secrets for the Hugging Face and Cloudflare credentials (`HF_TOKEN`, `HF_USERNAME`, `CF_API_TOKEN`, and `CF_ACCOUNT_ID`) and the `codex-ci` workflow under [`.github/workflows/codex-ci.yml`](.github/workflows/codex-ci.yml) will replay the same push → deploy cycle on every push to `main` (or on manual dispatch runs). The workflow:
+
+1. Logs into Hugging Face with `huggingface-cli`.
+2. Clones both Spaces, commits a timestamped `CODEx_OK.txt`, and pushes the change through authenticated HTTPS remotes.
+3. Installs Worker dependencies in `cloudflare/worker/` and deploys via `cloudflare/wrangler-action` using the secrets you provided.
+
+Adjust the `WORKER_DIR` environment variable inside the workflow if you move the Worker folder, and extend the final step with `curl` probes once you know the `workers.dev` URL that Wrangler prints for your account.
+
 ## Full integration walkthrough
 
 If you need a step-by-step guide (including where to paste tokens and how to confirm write access to each Space before deploying the worker), follow [docs/INTEGRATION.md](docs/INTEGRATION.md). It breaks the workflow into one-minute actions covering:

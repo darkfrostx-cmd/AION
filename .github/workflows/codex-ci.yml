@@ -1,0 +1,80 @@
+name: codex-ci
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  HF_NEURO_SPACE: darkfrostx/neuro-mechanism-backend
+  HF_AUDITOR_SPACE: darkfrostx/ssra-auditor
+  WORKER_DIR: cloudflare/worker
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show repo status
+        run: git status
+
+      - name: Install Hugging Face CLI
+        run: pip install --upgrade "huggingface_hub[cli]"
+
+      - name: Hugging Face login
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential -y
+
+      - name: Push smoke file to neuro space
+        env:
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPACE: ${{ env.HF_NEURO_SPACE }}
+        run: |
+          git clone "https://huggingface.co/spaces/$SPACE" .hf-neuro
+          echo "codex smoke $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .hf-neuro/CODEx_OK.txt
+          cd .hf-neuro
+          git config user.name "codex-ci"
+          git config user.email "codex-ci@users.noreply.github.com"
+          git add CODEx_OK.txt
+          git commit -m "codex: smoke test neuro" || echo "no-op"
+          git push "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${SPACE}"
+
+      - name: Push smoke file to auditor space
+        env:
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPACE: ${{ env.HF_AUDITOR_SPACE }}
+        run: |
+          git clone "https://huggingface.co/spaces/$SPACE" .hf-auditor
+          echo "codex smoke $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .hf-auditor/CODEx_OK.txt
+          cd .hf-auditor
+          git config user.name "codex-ci"
+          git config user.email "codex-ci@users.noreply.github.com"
+          git add CODEx_OK.txt
+          git commit -m "codex: smoke test auditor" || echo "no-op"
+          git push "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${SPACE}"
+
+      - name: Install Worker dependencies
+        working-directory: ${{ env.WORKER_DIR }}
+        run: npm install
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy
+          workingDirectory: ${{ env.WORKER_DIR }}
+
+      - name: Worker health check placeholder
+        run: echo "Add curl checks once the workers.dev URL is known"

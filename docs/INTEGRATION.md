@@ -133,6 +133,40 @@ Perform the steps below for **each** Space (`neuro-mechanism-backend` and `ssra-
 
 ---
 
+## 6. Automate the verification (optional but recommended)
+
+Once you have confirmed manual access, you can let the repository run the same checks on demand.
+
+1. Copy the environment template and provide your credentials:
+   ```powershell
+   Copy-Item .env.example .env
+   notepad .env
+   ```
+   *(On macOS/Linux use `cp .env.example .env` and edit with your favourite editor.)*
+2. From the project root, run the consolidated smoke test:
+   ```powershell
+   make smoke
+   ```
+   The script clones both Spaces inside `.smoke/`, writes a timestamped `CODEx_OK.txt` file so pushes are harmless and reversible, publishes the Cloudflare Worker with `npx wrangler publish`, and polls `https://<worker>.workers.dev/neuro/*` and `/auditor/*` until both respond with `200`.
+
+Use `make smoke-hf` or `make smoke-cf` to focus on one side when debugging. `make smoke-clean` removes the `.smoke/` workspace entirely.
+
+---
+
+## 7. Wire it into GitHub Actions (hands-free)
+
+1. In the GitHub repository, open **Settings → Secrets and variables → Actions** and add four repository secrets:
+   * `HF_TOKEN` – the Hugging Face write token you generated earlier.
+   * `HF_USERNAME` – your Hugging Face username (needed for authenticated HTTPS pushes).
+   * `CF_API_TOKEN` – the Cloudflare API token with Worker deploy permissions.
+   * `CF_ACCOUNT_ID` – your Cloudflare account identifier.
+2. Commit the workflow at `.github/workflows/codex-ci.yml` (already included in this repo). It runs on every push to `main` and on manual dispatch.
+3. Watch the **Actions** tab: the `codex-ci` job will clone both Spaces, push the timestamped `CODEx_OK.txt` file so they rebuild, install the Worker dependencies in `cloudflare/worker/`, and deploy the Worker through Cloudflare’s official action.
+
+> **Tip:** Once Wrangler prints your `workers.dev` URL, extend the final step in the workflow with `curl` probes so CI verifies the proxy routes too.
+
+---
+
 ## Troubleshooting quick reference
 
 | Symptom | Fix |
