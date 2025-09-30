@@ -2,6 +2,10 @@
 
 Utilities for interacting with Hugging Face repositories and Cloudflare services.
 
+> 📚 **New to the project?** Start with [`docs/OVERVIEW.md`](docs/OVERVIEW.md) for a
+> high-level map of the repository and how the Git, Hugging Face, and Cloudflare
+> pieces align before diving into the step-by-step guides below.
+
 ## Features
 - **Hugging Face repository client** for listing models, retrieving cross-repository metadata, exploring file trees, and downloading artifacts pinned to revisions.
 - **Repository-centric CLI** that surfaces the Hub helpers through commands such as `repo-info`, `repo-files`, and `download`.
